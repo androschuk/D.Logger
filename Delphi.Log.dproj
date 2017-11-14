@@ -100,7 +100,7 @@
             <MainSource>MainSource</MainSource>
         </DelphiCompile>
         <DCCReference Include="Delphi.Logger.Intf.pas"/>
-        <DCCReference Include="Delphi.Loger.Files.pas"/>
+        <DCCReference Include="Delphi.Logger.Files.pas"/>
         <DCCReference Include="Delphi.Logger.Impl.pas"/>
         <BuildConfiguration Include="Release">
             <Key>Cfg_2</Key>
