@@ -1,11 +1,6 @@
 program Demo.Log;
 
 uses
-  madExcept,
-  madLinkDisAsm,
-  madListHardware,
-  madListProcesses,
-  madListModules,
   Vcl.Forms,
   Form.LogDemo in 'Form.LogDemo.pas' {frmLogDemo};
 

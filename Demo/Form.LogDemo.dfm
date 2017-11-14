@@ -53,4 +53,13 @@ object frmLogDemo: TfrmLogDemo
       'Log message')
     TabOrder = 2
   end
+  object btnGetLogger: TButton
+    Left = 8
+    Top = 214
+    Width = 75
+    Height = 25
+    Caption = 'btnGetLogger'
+    TabOrder = 3
+    OnClick = btnGetLoggerClick
+  end
 end

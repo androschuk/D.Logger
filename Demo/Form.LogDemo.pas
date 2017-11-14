@@ -13,7 +13,9 @@ type
     btnWrite: TButton;
     mmoLogMessage: TMemo;
     lblLogMessage: TLabel;
+    btnGetLogger: TButton;
     procedure btnWriteClick(Sender: TObject);
+    procedure btnGetLoggerClick(Sender: TObject);
   private
     FLogger : ILogger;
     procedure FillLogLevel;
@@ -34,9 +36,23 @@ uses
 
 { TfrmLogDemo }
 
+procedure TfrmLogDemo.btnGetLoggerClick(Sender: TObject);
+var
+  Logger : ILogger;
+  I: Integer;
+begin
+  Logger :=  LogManager.GetLogger('Demo Logger');
+
+  for I := 0 to 20000 do
+  begin
+    Logger.Warning('Some message' + IntToStr(I));
+  end;
+end;
+
 procedure TfrmLogDemo.btnWriteClick(Sender: TObject);
 var
   LogLevel: TLogLevel;
+  MessageText: string;
 begin
   if rgLogLevel.ItemIndex = -1 then
   begin
@@ -46,14 +62,16 @@ begin
 
   LogLevel := TLogLevel(GetEnumValue(TypeInfo(TLogLevel), rgLogLevel.Items[rgLogLevel.ItemIndex]));
 
+  MessageText := mmoLogMessage.Text;
+
   case LogLevel of
-    Off: ;
-    Fatal: FLogger.Fatal(mmoLogMessage.Text);
-    Error: ;
-    Warning: ;
-    Info: ;
-    Debug: ;
-    Trace: ;
+    Off: {// Do nothing} ;
+    Fatal: FLogger.Fatal(MessageText);
+    Error: FLogger.Error(MessageText);
+    Warning: FLogger.Warning(MessageText);
+    Info: FLogger.Info(MessageText);
+    Debug: FLogger.Debug(MessageText);
+    Trace: FLogger.Trace(MessageText);
   end;
 end;
 
@@ -61,7 +79,7 @@ constructor TfrmLogDemo.Create(AOwner: TComponent);
 begin
   inherited;
 
-  FLogger := LogManager.CreateLogger('Demo Logger');
+  FLogger := LogManager.GetLogger('Demo Logger');
 
   FillLogLevel;
 end;
