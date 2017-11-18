@@ -6,7 +6,8 @@ uses
   Logger.Manager in 'Logger.Manager.pas',
   Logger.FileStorage in 'Logger.FileStorage.pas',
   Logger.Core in 'Logger.Core.pas',
-  Logger.Utils in 'Logger.Utils.pas';
+  Logger.Utils in 'Logger.Utils.pas',
+  Logger.OutputDebugString in 'Logger.OutputDebugString.pas';
 
 {$R *.res}
 

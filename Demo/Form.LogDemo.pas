@@ -36,6 +36,7 @@ implementation
 {$R *.dfm}
 
 uses
+  Logger.Utils, Logger.OutputDebugString;
 
 { TfrmLogDemo }
 
@@ -64,6 +65,7 @@ begin
     exit;
   end;
 
+  Logger := LogManager.GetCustomLogger('SomeLogger', [TOutputDebugStringStorage.Create]);
 
   LogLevel := StringToLogLevel(rgLogLevel.Items[rgLogLevel.ItemIndex]);
 
