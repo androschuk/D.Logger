@@ -16,6 +16,17 @@ uses
     Logger.Intf, System.Classes, Generics.Collections, Winapi.Windows;
 
 type
+  ILoggerSettings = interface
+  ['{E183ABA3-3FC4-4CBE-A93B-C84283D30D61}']
+    function GetLogLevel: TLogLevel; safecall;
+    procedure SetLogLevel(ALogLevel: TLogLevel); safecall;
+
+    procedure SetDefaults; safecall;
+    procedure Load; safecall;
+
+    property LogLevel: TLogLevel read GetLogLevel write SetLogLevel;
+  end;
+
   TLogArgument = class(TInterfacedObject, ILogArgument)
   private
     FLogLevel: TLogLevel;
@@ -32,10 +43,25 @@ type
     constructor Create(ASourceName: WideString; ALogLevel: TLogLevel; ALogMessage: WideString); reintroduce;
   end;
 
+  TLoggerSettings = class(TInterfacedObject, ILoggerSettings)
+  private
+    FConfigPath: string;
+    FLogLevel: TLogLevel;
+  protected
+    {ILoggerSettings}
+    function GetLogLevel: TLogLevel; safecall;
+    procedure SetLogLevel(ALogLevel: TLogLevel); safecall;
+
+    procedure SetDefaults; safecall;
+    procedure Load; safecall;
+  public
+    constructor Create(AConfigPath: string); reintroduce;
+  end;
+
   TLogger = class(TInterfacedObject, ILogger)
   strict private
+    FConfig: ILoggerSettings;
     FSourceName: WideString;
-    FLogLevel: TLogLevel;
   private
     type
       TLoggerThread = class(TThread)
@@ -74,16 +100,37 @@ type
 implementation
 
 uses
-  System.SysUtils, System.SyncObjs, System.TypInfo;
+  System.SysUtils, System.SyncObjs, System.TypInfo, IniFiles, Logger.Utils;
 
 { TFileLogger }
+function GetLogFileName: string;
+begin
+   Result := ChangeFileExt(GetAppName, '.log');
+end;
+
+function GetConfigFileName: string;
+begin
+   Result := 'Logger.Config.ini';
+end;
+
+function GetLogFilePath: string;
+begin
+  Result :=  GetAppPath + GetLogFileName;
+end;
+
+function GetConfigFilePath: string;
+begin
+  Result :=  GetAppPath + GetConfigFileName;
+end;
 
 constructor TLogger.Create(ASourceName: WideString; AStorages: TArray<IStorage>);
 begin
   inherited Create;
 
+  FConfig := TLoggerSettings.Create(GetConfigFilePath);
+  FConfig.Load;
+
   FSourceName := ASourceName;
-  FLogLevel := TLogLevel.Info;
 
   FWriter := TLoggerThread.Create(AStorages);
 
@@ -130,7 +177,7 @@ procedure TLogger.Log(ALogLevel: TLogLevel; AMessage: WideString);
   end;
 
 begin
-  if ALogLevel <= FLogLevel then
+  if ALogLevel <= FConfig.LogLevel then
     FWriter.Log(TLogArgument.Create(SourceName, ALogLevel, AMessage));
 end;
 
@@ -221,6 +268,43 @@ end;
 function TLogArgument.GetTimeStamp: TDateTime;
 begin
   Result := FTimeStamp;
+end;
+
+{ TLoggerSettings }
+
+constructor TLoggerSettings.Create(AConfigPath: string);
+begin
+  FConfigPath := AConfigPath;
+  SetDefaults;
+end;
+
+function TLoggerSettings.GetLogLevel: TLogLevel;
+begin
+  Result := FLogLevel;
+end;
+
+procedure TLoggerSettings.Load;
+var
+  Config: TMemIniFile;
+  LogLevelStr: string;
+begin
+  Config := TMemIniFile.Create(FConfigPath);
+  try
+    LogLevelStr := Config.ReadString(Self.ClassName, 'LogLevel', FLogLevel.ToString);
+    FLogLevel := StringToLogLevel(LogLevelStr);
+  finally
+    FreeAndNil(Config);
+  end;
+end;
+
+procedure TLoggerSettings.SetDefaults;
+begin
+  FLogLevel := TLogLevel.Info;
+end;
+
+procedure TLoggerSettings.SetLogLevel(ALogLevel: TLogLevel);
+begin
+  FLogLevel := ALogLevel;
 end;
 
 end.
