@@ -99,9 +99,11 @@
         <DelphiCompile Include="$(MainSource)">
             <MainSource>MainSource</MainSource>
         </DelphiCompile>
-        <DCCReference Include="Delphi.Logger.Intf.pas"/>
-        <DCCReference Include="Delphi.Logger.Files.pas"/>
-        <DCCReference Include="Delphi.Logger.Impl.pas"/>
+        <DCCReference Include="Logger.Intf.pas"/>
+        <DCCReference Include="Logger.Manager.pas"/>
+        <DCCReference Include="Logger.FileStorage.pas"/>
+        <DCCReference Include="Logger.Core.pas"/>
+        <DCCReference Include="Logger.Utils.pas"/>
         <BuildConfiguration Include="Release">
             <Key>Cfg_2</Key>
             <CfgParent>Base</CfgParent>
@@ -122,6 +124,10 @@
                 <Source>
                     <Source Name="MainSource">Delphi.Log.dpr</Source>
                 </Source>
+                <Excluded_Packages>
+                    <Excluded_Packages Name="$(BDSBIN)\dcloffice2k250.bpl">Microsoft Office 2000 Sample Automation Server Wrapper Components</Excluded_Packages>
+                    <Excluded_Packages Name="$(BDSBIN)\dclofficexp250.bpl">Microsoft Office XP Sample Automation Server Wrapper Components</Excluded_Packages>
+                </Excluded_Packages>
             </Delphi.Personality>
             <Deployment Version="3">
                 <DeployFile LocalName="Win32\Debug\Delphi.Log.exe" Configuration="Debug" Class="ProjectOutput">

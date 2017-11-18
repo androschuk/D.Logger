@@ -8,7 +8,7 @@
 {                                                       }
 {*******************************************************}
 
-unit Delphi.Logger.Intf;
+unit Logger.Intf;
 
 interface
 
@@ -20,7 +20,7 @@ type
 
   ILogger = interface
   ['{0981673E-0A05-4A11-9F5F-5078FF6C457D}']
-    function Name: WideString; safecall;
+    function SourceName: WideString; safecall;
 
     procedure Fatal(AMessage: WideString); safecall;
     procedure FatalFmt(AMessage: WideString; Args: array of const); safecall;
@@ -36,10 +36,30 @@ type
   ['{49AC54D5-B7BC-49A6-849D-83DFD9B1B9C4}']
   end;
 
+  ILogArgument = interface
+  ['{ABC4E531-D079-4052-89F2-59780D0663C5}']
+    function GetSourceName: WideString; safecall;
+    function GetLogLevel: TLogLevel; safecall;
+    function GetLogMessage: WideString; safecall;
+    function GetTimeStamp: TDateTime;safecall;
+
+    property SourceName: WideString read GetSourceName;
+    property LogLevel: TLogLevel read GetLogLevel;
+    property LogMessage: WideString read GetLogMessage;
+    property TimeStamp: TDateTime read GetTimeStamp;
+  end;
+
+  IStorage = interface
+  ['{3C670B2D-ED78-4B75-8D69-3EF3004C4CAD}']
+    procedure Write(Args: ILogArgument); safecall;
+    function Equal(AStorage: IStorage): Boolean; safecall;
+    function ClassName: WideString; safecall;
+  end;
+
   ILogManager = interface
   ['{BFBD0D5F-164F-471F-B901-11B74F5CC6D2}']
-    function GetLogger(AName: WideString) : ILogger; safecall; //overload;
-//    function CreateLogger(ALoggerSettings: ILoggerSettings) : ILogger; safecall; overload;
+    function GetLogger(ASourceName: WideString) : ILogger; safecall;
+    function GetCustomLogger(ASourceName: WideString; Storages: TArray<IStorage>) : ILogger; safecall;
   end;
 
 implementation

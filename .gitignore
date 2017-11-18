@@ -67,3 +67,8 @@ __recovery/
 
 #Subversion
 .svn
+
+#Custom settings
+Delphi.Log.res
+Demo.Log.res
+Demo.Log.mes

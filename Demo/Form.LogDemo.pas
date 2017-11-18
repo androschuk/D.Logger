@@ -5,7 +5,7 @@ interface
 uses
   Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes,
   Vcl.Graphics, Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls, Vcl.ExtCtrls,
-  Delphi.Logger.Impl, Delphi.Logger.Intf;
+  Logger.Manager, Logger.Intf;
 
 type
   TfrmLogDemo = class(TForm)
@@ -14,8 +14,12 @@ type
     mmoLogMessage: TMemo;
     lblLogMessage: TLabel;
     btnGetLogger: TButton;
+    btnOutputDbgStr: TButton;
+    btnTwoLoggerOneStorage: TButton;
     procedure btnWriteClick(Sender: TObject);
     procedure btnGetLoggerClick(Sender: TObject);
+    procedure btnOutputDbgStrClick(Sender: TObject);
+    procedure btnTwoLoggerOneStorageClick(Sender: TObject);
   private
     FLogger : ILogger;
     procedure FillLogLevel;
@@ -32,7 +36,6 @@ implementation
 {$R *.dfm}
 
 uses
-  System.TypInfo;
 
 { TfrmLogDemo }
 
@@ -41,12 +44,46 @@ var
   Logger : ILogger;
   I: Integer;
 begin
-  Logger :=  LogManager.GetLogger('Demo Logger');
+  Logger :=  LogManager.GetLogger('Demo Logger 2');
 
   for I := 0 to 20000 do
   begin
     Logger.Warning('Some message' + IntToStr(I));
   end;
+end;
+
+procedure TfrmLogDemo.btnOutputDbgStrClick(Sender: TObject);
+var
+  LogLevel: TLogLevel;
+  MessageText: string;
+  Logger: ILogger;
+begin
+  if rgLogLevel.ItemIndex = -1 then
+  begin
+    ShowMessage('Please select "Log Level"');
+    exit;
+  end;
+
+
+  LogLevel := StringToLogLevel(rgLogLevel.Items[rgLogLevel.ItemIndex]);
+
+  MessageText := Trim(mmoLogMessage.Text);
+
+  case LogLevel of
+    Off: {// Do nothing} ;
+    Fatal: Logger.Fatal(MessageText);
+    Error: Logger.Error(MessageText);
+    Warning: Logger.Warning(MessageText);
+    Info: Logger.Info(MessageText);
+    Debug: Logger.Debug(MessageText);
+    Trace: Logger.Trace(MessageText);
+  end;
+end;
+
+procedure TfrmLogDemo.btnTwoLoggerOneStorageClick(Sender: TObject);
+begin
+  LogManager.GetLogger('Logger1').Warning('Some Warning 1');
+  LogManager.GetLogger('Logger2').Warning('Some Warning 2');
 end;
 
 procedure TfrmLogDemo.btnWriteClick(Sender: TObject);
@@ -60,9 +97,9 @@ begin
     exit;
   end;
 
-  LogLevel := TLogLevel(GetEnumValue(TypeInfo(TLogLevel), rgLogLevel.Items[rgLogLevel.ItemIndex]));
+  LogLevel := StringToLogLevel(rgLogLevel.Items[rgLogLevel.ItemIndex]);
 
-  MessageText := mmoLogMessage.Text;
+  MessageText := Trim(mmoLogMessage.Text);
 
   case LogLevel of
     Off: {// Do nothing} ;
@@ -94,13 +131,9 @@ end;
 procedure TfrmLogDemo.FillLogLevel;
 var
   I: TLogLevel;
-  EnumName : string;
 begin
   for I := Low(TLogLevel) to High(TLogLevel) do
-  begin
-    EnumName := GetEnumName(TypeInfo(TLogLevel), Integer(I));
-    rgLogLevel.Items.Add(EnumName);
-  end;
+    rgLogLevel.Items.Add(I.ToString);
 end;
 
 end.

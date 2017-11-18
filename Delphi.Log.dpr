@@ -2,9 +2,11 @@ program Delphi.Log;
 
 uses
   Vcl.Forms,
-  Delphi.Logger.Intf in 'Delphi.Logger.Intf.pas',
-  Delphi.Logger.Files in 'Delphi.Logger.Files.pas',
-  Delphi.Logger.Impl in 'Delphi.Logger.Impl.pas';
+  Logger.Intf in 'Logger.Intf.pas',
+  Logger.Manager in 'Logger.Manager.pas',
+  Logger.FileStorage in 'Logger.FileStorage.pas',
+  Logger.Core in 'Logger.Core.pas',
+  Logger.Utils in 'Logger.Utils.pas';
 
 {$R *.res}
 

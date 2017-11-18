@@ -58,8 +58,26 @@ object frmLogDemo: TfrmLogDemo
     Top = 214
     Width = 75
     Height = 25
-    Caption = 'btnGetLogger'
+    Caption = 'GetLogger'
     TabOrder = 3
     OnClick = btnGetLoggerClick
+  end
+  object btnOutputDbgStr: TButton
+    Left = 89
+    Top = 215
+    Width = 104
+    Height = 25
+    Caption = 'OutpudDebugString'
+    TabOrder = 4
+    OnClick = btnOutputDbgStrClick
+  end
+  object btnTwoLoggerOneStorage: TButton
+    Left = 199
+    Top = 215
+    Width = 138
+    Height = 25
+    Caption = 'Two Logger One Storage'
+    TabOrder = 5
+    OnClick = btnTwoLoggerOneStorageClick
   end
 end

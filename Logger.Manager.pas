@@ -8,34 +8,36 @@
 {                                                       }
 {*******************************************************}
 
-unit Delphi.Logger.Impl;
+unit Logger.Manager;
 
 interface
 
 uses
-  Delphi.Logger.Intf;
+  Logger.Intf;
 
 function LogManager : ILogManager;
 
 implementation
 
 uses
-  System.SyncObjs, System.SysUtils, Winapi.Windows, Delphi.Logger.Files,
-  System.Classes;
+  System.SyncObjs, System.SysUtils, Winapi.Windows, Logger.Core, System.Classes, Logger.FileStorage;
 
 type
   TLogManager = class(TInterfacedObject, ILogManager)
   strict private
     class var FLogManager : ILogManager;
     FLoggerList: IInterfaceList;
+    FStorageCache: IInterfaceList;
     FListLocker: TMultiReadExclusiveWriteSynchronizer;
   private
-    function GetLoggerByName(AName: string): ILogger;
-    function CreateLogger(AName: string): ILogger;
+    function GetLoggerByName(ASourceName: string): ILogger;
+    function CreateLogger(ASourceName: string; Storages: TArray<IStorage>): ILogger;
+    function GetCachedStorages(AStorages: TArray<IStorage>): TArray<IStorage>;
+    function GetCachedStorage(AStorage: IStorage): IStorage;
   protected
     {ILogManager}
-    function GetLogger(AName: WideString) : ILogger; safecall; //overload;
-//    function CreateLogger(ALoggerSettings: ILoggerSettings) : ILogger; safecall; overload;
+    function GetLogger(ASourceName: WideString) : ILogger; safecall; //overload;
+    function GetCustomLogger(ASourceName: WideString; Storages: TArray<IStorage>) : ILogger; safecall; //overload;
   public
     class function Create : ILogManager;
     class destructor Destroy;// override;
@@ -49,21 +51,36 @@ begin
   Result := TLogManager.Create;
 end;
 
-function TLogManager.GetLogger(AName: WideString): ILogger;
+function TLogManager.GetCustomLogger(ASourceName: WideString;
+  Storages: TArray<IStorage>): ILogger;
 begin
-  Result := GetLoggerByName(AName);
+  Result := GetLoggerByName(ASourceName);
 
   if Assigned(Result) then
     Exit;
 
-  Result := CreateLogger(AName);
+  Result := CreateLogger(ASourceName, Storages);
 end;
 
-function TLogManager.CreateLogger(AName: string): ILogger;
+function TLogManager.GetLogger(ASourceName: WideString): ILogger;
+begin
+  Result := GetLoggerByName(ASourceName);
+
+  if Assigned(Result) then
+    Exit;
+
+  Result := CreateLogger(ASourceName, [TFileStorage.Create]);
+end;
+
+function TLogManager.CreateLogger(ASourceName: string; Storages: TArray<IStorage>): ILogger;
+var
+  CachedStorages: TArray<IStorage>;
 begin
   FListLocker.BeginWrite;
   try
-    Result := TFileLogger.Create(AName);
+    CachedStorages := GetCachedStorages(Storages);
+
+    Result := TLogger.Create(ASourceName, CachedStorages);
 
     FLoggerList.Add(Result);
   finally
@@ -71,8 +88,49 @@ begin
   end;
 end;
 
+function TLogManager.GetCachedStorages(AStorages: TArray<IStorage>): TArray<IStorage>;
+var
+  Storage: IStorage;
+  CachedStorage: IStorage;
+  I: Integer;
+begin
+  SetLength(Result, Length(AStorages));
 
-function TLogManager.GetLoggerByName(AName: string): ILogger;
+  for I := 0 to Length(AStorages) - 1 do
+  begin
+    Storage := AStorages[I];
+    CachedStorage := GetCachedStorage(Storage);
+
+    if Assigned(CachedStorage) then
+    begin
+      Result[I] := CachedStorage
+    end
+    else
+    begin
+      Result[I] := Storage;
+      FStorageCache.Add(Storage);
+    end;
+  end;
+end;
+
+function TLogManager.GetCachedStorage(AStorage: IStorage): IStorage;
+var
+  Storage: IStorage;
+  I: Integer;
+begin
+  Result := Nil;
+
+  for I := 0 to FStorageCache.Count - 1 do
+  begin
+    if not Supports(FStorageCache.Items[I], IStorage, Storage) then
+      Continue;
+
+    if Storage.Equal(AStorage) then
+      Exit(Storage);
+  end;
+end;
+
+function TLogManager.GetLoggerByName(ASourceName: string): ILogger;
 var
   I: Integer;
   Logger: ILogger;
@@ -83,7 +141,7 @@ begin
   try
     for I := 0 to FLoggerList.Count - 1 do
     begin
-      if Supports(FLoggerList.Items[I], ILogger, Logger) And SameText(Logger.Name, AName) then
+      if Supports(FLoggerList.Items[I], ILogger, Logger) And SameText(Logger.SourceName, ASourceName) then
       begin
         Exit(Logger);
       end;
@@ -102,7 +160,6 @@ class destructor TLogManager.Destroy;
 begin
   FreeAndNil(FListLocker);
 
-//  FLoggerList := Nil;
   inherited;
 end;
 
@@ -111,6 +168,7 @@ begin
   inherited;
 
   FLoggerList := TInterfaceList.Create;
+  FStorageCache := TInterfaceList.Create;
   FListLocker := TMultiReadExclusiveWriteSynchronizer.Create;
 end;
 
@@ -119,6 +177,7 @@ begin
   inherited;
 
   FLoggerList := Nil;
+  FStorageCache := Nil;
 end;
 
 class function TLogManager.Create : ILogManager;
