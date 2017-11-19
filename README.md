@@ -36,3 +36,13 @@ begin
   end;
 end.
 ```
+
+Output:
+```
+<DateTime>|<Logger Name>|Fatal|Fatal message
+<DateTime>|<Source Name>|Error|Error message
+<DateTime>|<Source Name>|Warning|Warning message
+<DateTime>|<Source Name>|Info|Info message
+<DateTime>|<Source Name>|Debug|Debug message
+<DateTime>|<Source Name>|Trace|Trace message
+```
