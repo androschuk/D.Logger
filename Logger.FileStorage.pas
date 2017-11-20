@@ -76,7 +76,7 @@ type
 implementation
 
 uses
-  Logger.Utils, IniFiles;
+  Logger.Utils, IniFiles, Windows;
 
 { TFileWriter }
 function GetLogFileName: string;
@@ -101,7 +101,7 @@ end;
 
 function TFileStorage.ClassName: WideString;
 begin
-  Result := Self.ClassName;
+  Result := inherited ClassName;
 end;
 
 constructor TFileStorage.Create;
@@ -155,7 +155,10 @@ var
 begin
   FLocker.Enter;
   try
-    FInitialized := True;
+    if FInitialized then
+      Exit;
+
+    OutputDebugString(PWideChar(' - InitFile'));
 
     LogFilePath := FConfig.LogPath;
 
@@ -164,10 +167,12 @@ begin
     else
       Mode := fmCreate or fmOpenWrite or fmShareDenyWrite;
                    //TBufferedFileStream
-    FileStream := TFileStream.Create(LogFilePath, Mode);
+    FileStream := TBufferedFileStream.Create(LogFilePath, Mode);
     FileStream.Seek(0, soEnd);
     FStreamWriter := TStreamWriter.Create(FileStream);
     FStreamWriter.OwnStream;
+
+    FInitialized := True;
   finally
     FLocker.Leave;
   end;
@@ -184,11 +189,19 @@ begin
   if Not FInitialized then
     InitFile;
 
-  FStreamWriter.Write(Format('%s|%s|%s|%s' + sLineBreak,[
-      FormatDateTime(FConfig.DateTimeFormat, Args.TimeStamp),
-      Args.SourceName,
-      Args.LogLevel.ToString,
-      Args.LogMessage]));
+  FLocker.Enter;
+  try
+    OutputDebugString(PWideChar(Format(' - [Write] Source: %s write: %s',
+     [Args.SourceName, Args.LogMessage])));
+
+    FStreamWriter.Write(Format('%s|%s|%s|%s' + sLineBreak,[
+        FormatDateTime(FConfig.DateTimeFormat, Args.TimeStamp),
+        Args.SourceName,
+        Args.LogLevel.ToString,
+        Args.LogMessage]));
+  finally
+    FLocker.Leave;
+  end;
 end;
 
 { TFileStorageConfig }

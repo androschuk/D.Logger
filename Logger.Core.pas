@@ -227,6 +227,7 @@ begin
   repeat
     while FQueue.PopItem(LogItem) = TWaitResult.wrSignaled do
     begin
+      OutputDebugString(PWideChar(Format(' - Logger.Count: %d; Source: %s write: %s', [Length(FStorages),LogItem.SourceName ,LogItem.LogMessage])));
           for Storage in FStorages do
           begin
             Storage.Write(LogItem);

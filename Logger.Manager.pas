@@ -28,6 +28,7 @@ type
     class var FLogManager : ILogManager;
     FLoggerList: IInterfaceList;
     FStorageCache: IInterfaceList;
+    FStorageLocker: TCriticalSection;
     FListLocker: TMultiReadExclusiveWriteSynchronizer;
   private
     function GetLoggerByName(ASourceName: string): ILogger;
@@ -46,6 +47,7 @@ type
     procedure BeforeDestruction; override;
   end;
 
+// Singletone
 function LogManager : ILogManager;
 begin
   Result := TLogManager.Create;
@@ -67,7 +69,10 @@ begin
   Result := GetLoggerByName(ASourceName);
 
   if Assigned(Result) then
+  begin
+    OutputDebugString(PWideChar(' - logger [' + ASourceName +'] found in cache' ));
     Exit;
+  end;
 
   Result := CreateLogger(ASourceName, [TFileStorage.Create]);
 end;
@@ -81,6 +86,7 @@ begin
     CachedStorages := GetCachedStorages(Storages);
 
     Result := TLogger.Create(ASourceName, CachedStorages);
+    OutputDebugString(PWideChar(' - logger [' + ASourceName +'] created' ));
 
     FLoggerList.Add(Result);
   finally
@@ -94,22 +100,29 @@ var
   CachedStorage: IStorage;
   I: Integer;
 begin
-  SetLength(Result, Length(AStorages));
+    SetLength(Result, Length(AStorages));
 
-  for I := 0 to Length(AStorages) - 1 do
-  begin
-    Storage := AStorages[I];
-    CachedStorage := GetCachedStorage(Storage);
+//  FStorageLocker.Enter;
+  try
+    for I := 0 to Length(AStorages) - 1 do
+    begin
+      Storage := AStorages[I];
+      CachedStorage := GetCachedStorage(Storage);
 
-    if Assigned(CachedStorage) then
-    begin
-      Result[I] := CachedStorage
-    end
-    else
-    begin
-      Result[I] := Storage;
-      FStorageCache.Add(Storage);
+      if Assigned(CachedStorage) then
+      begin
+        OutputDebugString(PWideChar(' - use existing storage ['+ CachedStorage.ClassName+'] from cache' ));
+        Result[I] := CachedStorage
+      end
+      else
+      begin
+        OutputDebugString(PWideChar(' - add storege ['+ Storage.ClassName+'] to cache' ));
+        Result[I] := Storage;
+        FStorageCache.Add(Storage);
+      end;
     end;
+  finally
+//    FStorageLocker.Leave;
   end;
 end;
 
@@ -159,6 +172,9 @@ end;
 class destructor TLogManager.Destroy;
 begin
   FreeAndNil(FListLocker);
+  FreeAndNil(FStorageLocker);
+
+  OutputDebugString(PWideChar(' <= class LogManager.Destroy'));
 
   inherited;
 end;
@@ -170,35 +186,53 @@ begin
   FLoggerList := TInterfaceList.Create;
   FStorageCache := TInterfaceList.Create;
   FListLocker := TMultiReadExclusiveWriteSynchronizer.Create;
+  FStorageLocker := TCriticalSection.Create;
 end;
 
 procedure TLogManager.BeforeDestruction;
 begin
   inherited;
 
+  OutputDebugString(PWideChar(' <= LogManager.BeforeDestruction'));
   FLoggerList := Nil;
   FStorageCache := Nil;
 end;
+
+var
+  Locker: TCriticalSection = Nil;
 
 class function TLogManager.Create : ILogManager;
 var
    LogManager: ILogManager;
 begin
-  if Not Assigned(FLogManager) then
-  begin
-    LogManager :=  inherited Create as Self;
-
-    // It's possible another thread also created one.
-    // Only one of us will be able to set the AObject singleton variable
-    if TInterlocked.CompareExchange(Pointer(FLogManager), Pointer(LogManager), nil) <> nil then
+  Locker.Enter;
+  try
+    if Not Assigned(FLogManager) then
     begin
-         // The other beat us. Destroy our newly created object and use theirs.
-         FreeAndNil(LogManager);
-    end;
+      LogManager :=  inherited Create as Self;
+      OutputDebugString(PWideChar(' => LogManager created'));
 
-    FLogManager._AddRef;
+      // It's possible another thread also created one.
+      // Only one of us will be able to set the AObject singleton variable
+      if TInterlocked.CompareExchange(Pointer(FLogManager), Pointer(LogManager), pointer(nil)) <> nil then
+      begin
+           // The other beat us. Destroy our newly created object and use theirs.
+           LogManager := Nil;
+
+           OutputDebugString(PWideChar('[x] LogManager'));
+      end;
+
+      FLogManager._AddRef;
+    end;
+    Result := FLogManager;
+  finally
+    Locker.Leave;
   end;
-  Result := FLogManager;
 end;
+
+initialization
+  Locker := TCriticalSection.Create;
+finalization
+  FreeAndNil(Locker);
 
 end.
