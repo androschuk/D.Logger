@@ -65,17 +65,23 @@ type
     FSourceName: String;
     FStorages: TArray<IStorage>;
   protected
-    procedure Log(ALogLevel: TLogLevel; AMessage: WideString); virtual;
+    procedure Log(ALogLevel: TLogLevel; AMessage: WideString; Args: array of const); overload; virtual;
+    procedure Log(ALogLevel: TLogLevel; AMessage: WideString); overload; virtual;
 
     {ILogger}
     function SourceName: WideString; safecall;
     procedure Fatal(AMessage: WideString); safecall;
     procedure FatalFmt(AMessage: WideString; Args: array of const); safecall;
     procedure Error(AMessage: WideString); safecall;
+    procedure ErrorFmt(AMessage: WideString; Args: array of const); safecall;
     procedure Warning(AMessage: WideString); safecall;
+    procedure WarningFmt(AMessage: WideString; Args: array of const); safecall;
     procedure Info(AMessage: WideString); safecall;
+    procedure InfoFmt(AMessage: WideString; Args: array of const); safecall;
     procedure Debug(AMessage: WideString); safecall;
+    procedure DebugFmt(AMessage: WideString; Args: array of const); safecall;
     procedure Trace(AMessage: WideString); safecall;
+    procedure TraceFmt(AMessage: WideString; Args: array of const); safecall;
   public
     constructor Create(ASourceName: WideString; AStorages: TArray<IStorage>); reintroduce;
     destructor Destroy; override;
@@ -126,6 +132,11 @@ begin
   Log(TLogLevel.Debug, AMessage);
 end;
 
+procedure TLogger.DebugFmt(AMessage: WideString; Args: array of const);
+begin
+  Log(TLogLevel.Debug, AMessage, Args);
+end;
+
 destructor TLogger.Destroy;
 begin
   InternalLogFmt(' <= %s.Destroy(Source: %s)', [Self.ClassName, FSourceName]);
@@ -137,6 +148,11 @@ begin
   Log(TLogLevel.Error, AMessage);
 end;
 
+procedure TLogger.ErrorFmt(AMessage: WideString; Args: array of const);
+begin
+  Log(TLogLevel.Error, AMessage, Args);
+end;
+
 procedure TLogger.Fatal(AMessage: WideString);
 begin
   Log(TLogLevel.Fatal, AMessage);
@@ -144,12 +160,22 @@ end;
 
 procedure TLogger.FatalFmt(AMessage: WideString; Args: array of const);
 begin
-  Log(TLogLevel.Fatal, Format(AMessage, Args));
+  Log(TLogLevel.Fatal, AMessage, Args);
 end;
 
 procedure TLogger.Info(AMessage: WideString);
 begin
   Log(TLogLevel.Info, AMessage);
+end;
+
+procedure TLogger.InfoFmt(AMessage: WideString; Args: array of const);
+begin
+  Log(TLogLevel.Info, AMessage, Args);
+end;
+
+procedure TLogger.Log(ALogLevel: TLogLevel; AMessage: WideString; Args: array of const);
+begin
+  Log(ALogLevel, Format(AMessage, Args));
 end;
 
 procedure TLogger.Log(ALogLevel: TLogLevel; AMessage: WideString);
@@ -182,9 +208,19 @@ begin
   Log(TLogLevel.Trace, AMessage);
 end;
 
+procedure TLogger.TraceFmt(AMessage: WideString; Args: array of const);
+begin
+  Log(TLogLevel.Trace, AMessage, Args);
+end;
+
 procedure TLogger.Warning(AMessage: WideString);
 begin
   Log(TLogLevel.Warning, AMessage);
+end;
+
+procedure TLogger.WarningFmt(AMessage: WideString; Args: array of const);
+begin
+  Log(TLogLevel.Warning, AMessage, Args);
 end;
 
 { TStorageArgument }

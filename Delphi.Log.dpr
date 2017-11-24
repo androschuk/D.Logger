@@ -8,7 +8,8 @@ uses
   Logger.Core in 'Logger.Core.pas',
   Logger.Utils in 'Logger.Utils.pas',
   Logger.OutputDebugString in 'Logger.OutputDebugString.pas',
-  Logger.Storage.Core in 'Logger.Storage.Core.pas';
+  Logger.Storage.Core in 'Logger.Storage.Core.pas',
+  Logger.Simple in 'Logger.Simple.pas';
 
 {$R *.res}
 

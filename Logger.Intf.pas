@@ -24,10 +24,19 @@ type
     procedure FatalFmt(AMessage: WideString; Args: array of const); safecall;
 
     procedure Error(AMessage: WideString); safecall;
+    procedure ErrorFmt(AMessage: WideString; Args: array of const); safecall;
+
     procedure Warning(AMessage: WideString); safecall;
+    procedure WarningFmt(AMessage: WideString; Args: array of const); safecall;
+
     procedure Info(AMessage: WideString); safecall;
+    procedure InfoFmt(AMessage: WideString; Args: array of const); safecall;
+
     procedure Debug(AMessage: WideString); safecall;
+    procedure DebugFmt(AMessage: WideString; Args: array of const); safecall;
+
     procedure Trace(AMessage: WideString); safecall;
+    procedure TraceFmt(AMessage: WideString; Args: array of const); safecall;
 
     function SourceName: WideString; safecall;
   end;
