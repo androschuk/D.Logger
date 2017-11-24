@@ -41,6 +41,7 @@ type
     function GetTimeStamp: TDateTime; safecall;
   public
     constructor Create(ASourceName: WideString; ALogLevel: TLogLevel; ALogMessage: WideString); reintroduce;
+    destructor Destroy; override;
   end;
 
   TLoggerSettings = class(TInterfacedObject, ILoggerSettings)
@@ -61,32 +62,15 @@ type
   TLogger = class(TInterfacedObject, ILogger)
   strict private
     FConfig: ILoggerSettings;
-    FSourceName: WideString;
-  private
-    type
-      TLoggerThread = class(TThread)
-      strict private
-        FStorages : TArray<IStorage>;
-        FQueue: TThreadedQueue<ILogArgument>;
-      protected
-        procedure Execute; override;
-      public
-        constructor Create(AStorages: TArray<IStorage>);
-        destructor Destroy; override;
-
-        procedure Log(ALogItem: ILogArgument);
-      end;
-    var
-      FWriter : TLoggerThread;
+    FSourceName: String;
+    FStorages: TArray<IStorage>;
   protected
     procedure Log(ALogLevel: TLogLevel; AMessage: WideString); virtual;
 
     {ILogger}
     function SourceName: WideString; safecall;
-
     procedure Fatal(AMessage: WideString); safecall;
     procedure FatalFmt(AMessage: WideString; Args: array of const); safecall;
-
     procedure Error(AMessage: WideString); safecall;
     procedure Warning(AMessage: WideString); safecall;
     procedure Info(AMessage: WideString); safecall;
@@ -131,10 +115,10 @@ begin
   FConfig.Load;
 
   FSourceName := ASourceName;
-
-  FWriter := TLoggerThread.Create(AStorages);
+  FStorages := AStorages;
 
   Debug(Self.ClassName + ' initialized');
+  InternalLogFmt(' => %s.Create(Source: %s)', [Self.ClassName, ASourceName]);
 end;
 
 procedure TLogger.Debug(AMessage: WideString);
@@ -144,8 +128,7 @@ end;
 
 destructor TLogger.Destroy;
 begin
-  FreeAndNil(FWriter);
-
+  InternalLogFmt(' <= %s.Destroy(Source: %s)', [Self.ClassName, FSourceName]);
   inherited;
 end;
 
@@ -176,9 +159,17 @@ procedure TLogger.Log(ALogLevel: TLogLevel; AMessage: WideString);
     Result := FormatDateTime('yyyy-mm-dd hh:nn:ss:zzz', now);
   end;
 
+var
+  Storage: IStorage;
+  LogItem: ILogArgument;
 begin
   if ALogLevel <= FConfig.LogLevel then
-    FWriter.Log(TLogArgument.Create(SourceName, ALogLevel, AMessage));
+  begin
+    LogItem := TLogArgument.Create(SourceName, ALogLevel, AMessage);
+
+    for Storage in FStorages do
+      Storage.Write(LogItem);
+  end;
 end;
 
 function TLogger.SourceName: WideString;
@@ -196,58 +187,22 @@ begin
   Log(TLogLevel.Warning, AMessage);
 end;
 
-{ TFileWtiter }
-
-constructor TLogger.TLoggerThread.Create(AStorages: TArray<IStorage>);
-begin
-  inherited Create(False);
-  FreeOnTerminate := False;
-
-  FStorages := AStorages;
-  FQueue := TThreadedQueue<ILogArgument>.Create(1500, MaxLongint, 100);
-end;
-
-destructor TLogger.TLoggerThread.Destroy;
-begin
-  Terminate;
-  WaitFor;
-
-  FreeAndNil(FQueue);
-
-  inherited;
-end;
-
-procedure TLogger.TLoggerThread.Execute;
-var
-  LogItem: ILogArgument;
-  Storage: IStorage;
-begin
-  NameThreadForDebugging('TLogger.TLoggerThread');
-
-  repeat
-    while FQueue.PopItem(LogItem) = TWaitResult.wrSignaled do
-    begin
-          for Storage in FStorages do
-          begin
-            Storage.Write(LogItem);
-          end;
-    end;
-  until Terminated;
-end;
-
-procedure TLogger.TLoggerThread.Log(ALogItem: ILogArgument);
-begin
-  FQueue.PushItem(ALogItem);
-end;
-
 { TStorageArgument }
 
 constructor TLogArgument.Create(ASourceName: WideString; ALogLevel: TLogLevel; ALogMessage: WideString);
 begin
+  FTimeStamp := Now;
   FLogLevel := ALogLevel;
   FLogMessage := ALogMessage;
   FSourceName := ASourceName;
-  FTimeStamp := Now;
+
+  InternalLogFmt('  [+] %s.Create; Source: %s; Msg: %s', [Self.ClassName, FSourceName, FLogMessage]);
+end;
+
+destructor TLogArgument.Destroy;
+begin
+  InternalLogFmt('  [-] %s.Destroy; Source: %s; Msg: %s', [Self.ClassName, FSourceName, FLogMessage]);
+  inherited;
 end;
 
 function TLogArgument.GetLogLevel: TLogLevel;

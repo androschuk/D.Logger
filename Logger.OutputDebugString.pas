@@ -13,7 +13,7 @@ unit Logger.OutputDebugString;
 interface
 
 uses
-  System.Classes, Logger.Intf, System.SysUtils, System.SyncObjs;
+  System.Classes, Logger.Intf, System.SysUtils, System.SyncObjs, Logger.Storage.Core;
 
 type
   IOutputDebugStringStorageSettings = interface
@@ -42,14 +42,13 @@ type
     constructor Create(AConfigPath: string); reintroduce;
   end;
 
-  TOutputDebugStringStorage = class(TInterfacedObject, IStorage)
+  TOutputDebugStringStorage = class(TStorage)
   private
     FConfig: IOutputDebugStringStorageSettings;
   protected
     {IStorage}
-    procedure Write(Args: ILogArgument); safecall;
-    function Equal(AStorage: IStorage): Boolean; safecall;
-    function ClassName: WideString; safecall;
+    procedure Write(Args: ILogArgument); override; safecall;
+    function Equal(AStorage: IStorage): Boolean; override; safecall;
   public
     constructor Create; reintroduce;
     destructor Destroy; override;
@@ -82,11 +81,6 @@ end;
 
 { TOutputDebugStringStorage }
 
-function TOutputDebugStringStorage.ClassName: WideString;
-begin
-  Result := Self.ClassName;
-end;
-
 constructor TOutputDebugStringStorage.Create;
 begin
   FConfig := TOutputDebugStringStorageSettings.Create(GetConfigFilePath);
@@ -101,7 +95,7 @@ end;
 
 function TOutputDebugStringStorage.Equal(AStorage: IStorage): Boolean;
 begin
-  Result := SameText(Self.ClassName, AStorage.ClassName);
+  Result := SameText(Self.ClassName, AStorage.StorageClassName);
 end;
 
 procedure TOutputDebugStringStorage.Write(Args: ILogArgument);

@@ -6,7 +6,10 @@
         <Projects Include="Delphi.Log.dproj">
             <Dependencies/>
         </Projects>
-        <Projects Include="Demo\Demo.Log.dproj">
+        <Projects Include="Demo\Simple Logger\SimpleLogger.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="Demo\ConsoleApp\ConsoleApp.dproj">
             <Dependencies/>
         </Projects>
     </ItemGroup>
@@ -26,23 +29,32 @@
     <Target Name="Delphi_Log:Make">
         <MSBuild Projects="Delphi.Log.dproj" Targets="Make"/>
     </Target>
-    <Target Name="Demo_Log">
-        <MSBuild Projects="Demo\Demo.Log.dproj"/>
+    <Target Name="SimpleLogger">
+        <MSBuild Projects="Demo\Simple Logger\SimpleLogger.dproj"/>
     </Target>
-    <Target Name="Demo_Log:Clean">
-        <MSBuild Projects="Demo\Demo.Log.dproj" Targets="Clean"/>
+    <Target Name="SimpleLogger:Clean">
+        <MSBuild Projects="Demo\Simple Logger\SimpleLogger.dproj" Targets="Clean"/>
     </Target>
-    <Target Name="Demo_Log:Make">
-        <MSBuild Projects="Demo\Demo.Log.dproj" Targets="Make"/>
+    <Target Name="SimpleLogger:Make">
+        <MSBuild Projects="Demo\Simple Logger\SimpleLogger.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="ConsoleApp">
+        <MSBuild Projects="Demo\ConsoleApp\ConsoleApp.dproj"/>
+    </Target>
+    <Target Name="ConsoleApp:Clean">
+        <MSBuild Projects="Demo\ConsoleApp\ConsoleApp.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="ConsoleApp:Make">
+        <MSBuild Projects="Demo\ConsoleApp\ConsoleApp.dproj" Targets="Make"/>
     </Target>
     <Target Name="Build">
-        <CallTarget Targets="Delphi_Log;Demo_Log"/>
+        <CallTarget Targets="Delphi_Log;SimpleLogger;ConsoleApp"/>
     </Target>
     <Target Name="Clean">
-        <CallTarget Targets="Delphi_Log:Clean;Demo_Log:Clean"/>
+        <CallTarget Targets="Delphi_Log:Clean;SimpleLogger:Clean;ConsoleApp:Clean"/>
     </Target>
     <Target Name="Make">
-        <CallTarget Targets="Delphi_Log:Make;Demo_Log:Make"/>
+        <CallTarget Targets="Delphi_Log:Make;SimpleLogger:Make;ConsoleApp:Make"/>
     </Target>
     <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
 </Project>
