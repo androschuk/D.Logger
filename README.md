@@ -3,7 +3,7 @@ Simple logging system for Delphi
 
 ## How to use
 
-###Quick logging
+### Quick logging
 ```
 program MinimumApp;
 
@@ -32,7 +32,7 @@ begin
   end;
 end.
 ```
-###Flexible logging
+### Flexible logging
 ```
 program ConsoleApp;
 
