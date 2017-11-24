@@ -13,7 +13,7 @@ unit Logger.FileStorage;
 interface
 
 uses
-  System.Classes, Logger.Intf, System.SysUtils, System.SyncObjs;
+  System.Classes, Logger.Intf, System.SysUtils, System.SyncObjs, Logger.Storage.Core;
 
 type
   IFileStorageSettings = interface
@@ -54,9 +54,8 @@ type
     constructor Create(AConfigPath: string); reintroduce;
   end;
 
-  TFileStorage = class(TInterfacedObject, IStorage, IFileStorage)
+  TFileStorage = class(TAsyncStorage, IFileStorage)
   private
-    FLocker: TCriticalSection;
     FConfig: IFileStorageSettings;
     FStreamWriter: TStreamWriter;
     FInitialized: Boolean;
@@ -64,9 +63,9 @@ type
     procedure FinalizeFile;
   protected
     {IStorage}
-    procedure Write(Args: ILogArgument); safecall;
-    function Equal(AStorage: IStorage): Boolean; safecall;
-    function ClassName: WideString; safecall;
+    procedure AsyncWriteHandler(Args: ILogArgument); override;
+    function Equal(AStorage: IStorage): Boolean; override; safecall;
+    {IFileStorage}
     function GetSettings: IFileStorageSettings; safecall;
   public
     constructor Create; reintroduce;
@@ -76,7 +75,7 @@ type
 implementation
 
 uses
-  Logger.Utils, IniFiles, Windows;
+  Windows, IniFiles, Logger.Utils;
 
 { TFileWriter }
 function GetLogFileName: string;
@@ -99,16 +98,12 @@ begin
   Result :=  GetAppPath + GetConfigFileName;
 end;
 
-function TFileStorage.ClassName: WideString;
-begin
-  Result := inherited ClassName;
-end;
-
 constructor TFileStorage.Create;
 begin
   inherited Create;
 
-  FLocker := TCriticalSection.Create;
+  InternalLogFmt(' -> %s.Create', [Self.ClassName]);
+
   FInitialized := False;
 
   FConfig := TFileStorageSettings.Create(GetConfigFilePath);
@@ -118,7 +113,8 @@ end;
 destructor TFileStorage.Destroy;
 begin
   FinalizeFile;
-  FreeAndNil(FLocker);
+
+  InternalLogFmt(' <- %s.Destroy', [Self.ClassName]);
 
   inherited;
 end;
@@ -153,29 +149,24 @@ var
   FileStream: TFileStream;
   LogFilePath: WideString;
 begin
-  FLocker.Enter;
-  try
-    if FInitialized then
-      Exit;
+  if FInitialized then
+    Exit;
 
-    OutputDebugString(PWideChar(' - InitFile'));
+  InternalLog('- InitFile');
 
-    LogFilePath := FConfig.LogPath;
+  LogFilePath := FConfig.LogPath;
 
-    if FileExists(LogFilePath) then
-      Mode := fmOpenReadWrite or fmShareDenyWrite
-    else
-      Mode := fmCreate or fmOpenWrite or fmShareDenyWrite;
-                   //TBufferedFileStream
-    FileStream := TBufferedFileStream.Create(LogFilePath, Mode);
-    FileStream.Seek(0, soEnd);
-    FStreamWriter := TStreamWriter.Create(FileStream);
-    FStreamWriter.OwnStream;
+  if FileExists(LogFilePath) then
+    Mode := fmOpenReadWrite or fmShareDenyWrite
+  else
+    Mode := fmCreate or fmOpenWrite or fmShareDenyWrite;
+                 //TBufferedFileStream
+  FileStream := TFileStream.Create(LogFilePath, Mode);
+  FileStream.Seek(0, soEnd);
+  FStreamWriter := TStreamWriter.Create(FileStream);
+  FStreamWriter.OwnStream;
 
-    FInitialized := True;
-  finally
-    FLocker.Leave;
-  end;
+  FInitialized := True;
 end;
 
 procedure TFileStorageSettings.SetDefaults;
@@ -184,24 +175,18 @@ begin
   FDateTimeFormat := 'YYYY.MM.DD HH:NN:SS:ZZZ';
 end;
 
-procedure TFileStorage.Write(Args: ILogArgument);
+procedure TFileStorage.AsyncWriteHandler(Args: ILogArgument);
 begin
   if Not FInitialized then
     InitFile;
 
-  FLocker.Enter;
-  try
-    OutputDebugString(PWideChar(Format(' - [Write] Source: %s write: %s',
-     [Args.SourceName, Args.LogMessage])));
+  InternalLogFmt(' - [Write] Source: %s write: %s', [Args.SourceName, Args.LogMessage]);
 
-    FStreamWriter.Write(Format('%s|%s|%s|%s' + sLineBreak,[
-        FormatDateTime(FConfig.DateTimeFormat, Args.TimeStamp),
-        Args.SourceName,
-        Args.LogLevel.ToString,
-        Args.LogMessage]));
-  finally
-    FLocker.Leave;
-  end;
+  FStreamWriter.Write(Format('%s|%s|%s|%s' + sLineBreak,[
+      FormatDateTime(FConfig.DateTimeFormat, Args.TimeStamp),
+      Args.SourceName,
+      Args.LogLevel.ToString,
+      Args.LogMessage]));
 end;
 
 { TFileStorageConfig }

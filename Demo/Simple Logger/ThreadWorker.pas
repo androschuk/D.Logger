@@ -3,18 +3,17 @@ unit ThreadWorker;
 interface
 
 uses
-  System.Classes, System.SyncObjs;
+  System.Classes, System.SyncObjs, System.Threading;
 
-procedure ExecuteTasks(ATaskCount, ALogRecordCount : Integer; OnStatusChange: TGetStrProc);
+function ExecuteTasks(ATaskCount, ALogRecordCount : Integer; OnStatusChange: TGetStrProc): TArray<ITask>;
 
 implementation
 
 uses
-   System.Threading, Logger.Manager, Logger.Intf, System.SysUtils;
+   Logger.Manager, Logger.Intf, System.SysUtils;
 
 function NewGuid: TGuid;
 var
-  CreateResult: HResult;
   Uid: TGuid;
 begin
   if CreateGuid(Uid) <> S_OK then
@@ -22,17 +21,14 @@ begin
   Result := Uid;
 end;
 
-procedure ExecuteTasks(ATaskCount, ALogRecordCount : Integer; OnStatusChange: TGetStrProc);
+function ExecuteTasks(ATaskCount, ALogRecordCount : Integer; OnStatusChange: TGetStrProc): TArray<ITask>;
 var
-  Tasks : TArray<ITask>;
-  Task: ITask;
   Proc : TProc;
   I: Integer;
 begin
   Proc :=  procedure
     var
      Logger : ILogger;
-     I: Integer;
      processed: integer; // shared counter
      total    : integer; // total number of items to be processed
     begin
@@ -42,7 +38,7 @@ begin
 
        Logger := LogManager.GetLogger('Task_' + NewGuid.ToString);
 
-       TThread.Synchronize(TThread.CurrentThread,
+       TThread.Queue(Nil,
         procedure
         begin
 
@@ -55,7 +51,7 @@ begin
          var
            new: integer;
          begin
-           Logger.Info(I.ToString);
+           Logger.Error(I.ToString);
 
            new := TInterlocked.Increment(processed);
 
@@ -63,17 +59,17 @@ begin
               TThread.Queue(nil,
                 procedure
                 var
-                  newValue: Integer;
+                  Percent: Integer;
                 begin
                   //update the progress bar in the main thread
-                  newValue := Round(new / total * 100);
-                  OnStatusChange(Format('%s : [%d]; processsed: %d; total: %d', [Logger.SourceName, newValue, new, total]));
+                  Percent := Round(new / total * 100);
+                  OnStatusChange(Format('%s : [complete%: %d]; processsed: %d; total: %d', [Logger.SourceName, Percent, new, total]));
                 end
               ); //TThread.Queue
          end);
 
          // Update the UI
-         TThread.Queue(nil,
+         TThread.Queue(Nil,
          procedure
          begin
             if Assigned(OnStatusChange) then
@@ -81,12 +77,12 @@ begin
          end);
     end;
 
-  SetLength(Tasks, ATaskCount);
+  SetLength(Result, ATaskCount);
 
   for I := 0 to ATaskCount - 1 do
   begin
-    Tasks[I] := TTask.Create(Proc);
-    Tasks[I].Start;
+    Result[I] := TTask.Create(Proc);
+    Result[I].Start;
   end;
 
 //  TTask.WaitForAll(Tasks);

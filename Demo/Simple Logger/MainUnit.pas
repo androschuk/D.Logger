@@ -3,8 +3,8 @@ unit MainUnit;
 interface
 
 uses
-  Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,
-  Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls, Vcl.ExtCtrls;
+  Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes,
+  Vcl.Graphics, Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls, Vcl.ExtCtrls;
 
 type
   TMainForm = class(TForm)
@@ -36,7 +36,7 @@ end;
 
 procedure TMainForm.btnExecuteClick(Sender: TObject);
 begin
-  ExecuteTasks(1, 5000, OnStatusChangeHandler);
+  ExecuteTasks(4, 5000, OnStatusChangeHandler);
 end;
 
 end.

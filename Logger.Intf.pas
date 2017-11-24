@@ -20,8 +20,6 @@ type
 
   ILogger = interface
   ['{0981673E-0A05-4A11-9F5F-5078FF6C457D}']
-    function SourceName: WideString; safecall;
-
     procedure Fatal(AMessage: WideString); safecall;
     procedure FatalFmt(AMessage: WideString; Args: array of const); safecall;
 
@@ -30,6 +28,8 @@ type
     procedure Info(AMessage: WideString); safecall;
     procedure Debug(AMessage: WideString); safecall;
     procedure Trace(AMessage: WideString); safecall;
+
+    function SourceName: WideString; safecall;
   end;
 
   ILoggerSettings = interface
@@ -53,7 +53,7 @@ type
   ['{3C670B2D-ED78-4B75-8D69-3EF3004C4CAD}']
     procedure Write(Args: ILogArgument); safecall;
     function Equal(AStorage: IStorage): Boolean; safecall;
-    function ClassName: WideString; safecall;
+    function StorageClassName: WideString; safecall;
   end;
 
   ILogManager = interface

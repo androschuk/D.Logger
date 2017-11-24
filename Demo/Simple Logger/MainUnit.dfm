@@ -2,8 +2,8 @@ object MainForm: TMainForm
   Left = 0
   Top = 0
   Caption = 'MainForm'
-  ClientHeight = 281
-  ClientWidth = 503
+  ClientHeight = 406
+  ClientWidth = 646
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
@@ -18,8 +18,8 @@ object MainForm: TMainForm
     AlignWithMargins = True
     Left = 6
     Top = 6
-    Width = 491
-    Height = 234
+    Width = 634
+    Height = 359
     Margins.Left = 6
     Margins.Top = 6
     Margins.Right = 6
@@ -27,26 +27,26 @@ object MainForm: TMainForm
     Align = alClient
     ScrollBars = ssVertical
     TabOrder = 0
-    ExplicitWidth = 406
+    ExplicitWidth = 491
+    ExplicitHeight = 83
   end
   object pnlButtons: TPanel
     Left = 0
-    Top = 240
-    Width = 503
+    Top = 365
+    Width = 646
     Height = 41
     Align = alBottom
     BevelOuter = bvNone
     Caption = 'pnlButtons'
     ShowCaption = False
     TabOrder = 1
-    ExplicitLeft = 88
-    ExplicitTop = 160
-    ExplicitWidth = 185
+    ExplicitTop = 240
+    ExplicitWidth = 503
     DesignSize = (
-      503
+      646
       41)
     object btnExecute: TButton
-      Left = 423
+      Left = 566
       Top = 9
       Width = 75
       Height = 25
@@ -54,7 +54,7 @@ object MainForm: TMainForm
       Caption = 'Run Tasks'
       TabOrder = 0
       OnClick = btnExecuteClick
-      ExplicitLeft = 338
+      ExplicitLeft = 423
     end
   end
 end
