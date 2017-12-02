@@ -22,12 +22,18 @@ type
     procedure SetLogPath(ALogPath: WideString); safecall;
     function GetDateTimeFormat: WideString; safecall;
     procedure SetDateTimeFormat(ADateTimeFormat: WideString); safecall;
+    function GetMaxFileSize: Int64; safecall;
+    procedure SetMaxFileSize(AFileSize: Int64); safecall;
+    function GetFilesCount: Integer; safecall;
+    procedure SetFilesCount(AFilesCount: Integer); safecall;
 
     procedure SetDefaults;safecall;
     procedure Load; safecall;
 
     property LogPath: WideString read GetLogPath write SetLogPath;
     property DateTimeFormat: WideString read GetDateTimeFormat write SetDateTimeFormat;
+    property MaxFileSize: Int64 read GetMaxFileSize write SetMaxFileSize;
+    property FilesCount: Integer read GetFilesCount write SetFilesCount;
   end;
 
   IFileStorage = interface
@@ -42,6 +48,8 @@ type
     FConfigPath: string;
     FDateTimeFormat: WideString;
     FLogPath: string;
+    FMaxFileSize: Int64;
+    FFilesCount: Integer;
   protected
     {IFileStorageSettings}
     procedure Load; safecall;
@@ -50,8 +58,29 @@ type
     procedure SetLogPath(ALogPath: WideString); safecall;
     function GetDateTimeFormat: WideString; safecall;
     procedure SetDateTimeFormat(ADateTimeFormat: WideString); safecall;
+    function GetMaxFileSize: Int64; safecall;
+    procedure SetMaxFileSize(AFileSize: Int64); safecall;
+    function GetFilesCount: Integer; safecall;
+    procedure SetFilesCount(AFilesCount: Integer); safecall;
   public
     constructor Create(AConfigPath: string); reintroduce;
+  end;
+
+  TPathWorker = class
+  private
+    FPath: string;
+    FConfig: IFileStorageSettings;
+    FCurFileNum: Integer;
+    FNumbersOweflow: Boolean;
+  public
+    // Validations
+    function IsFileSizeOwerflow(const ASize: Int64): Boolean;
+
+    procedure UseNextFile;
+    function WorkingFilePath: string;
+
+    constructor Create(AConfig: IFileStorageSettings);
+    destructor Destroy; override;
   end;
 
   TFileStorage = class(TAsyncStorage, IFileStorage)
@@ -59,7 +88,8 @@ type
     FConfig: IFileStorageSettings;
     FStreamWriter: TStreamWriter;
     FInitialized: Boolean;
-    procedure InitFile;
+    PathWorker: TPathWorker;
+    procedure InitFile(const AFileName: string);
     procedure FinalizeFile;
   protected
     {IStorage}
@@ -75,7 +105,11 @@ type
 implementation
 
 uses
-  Windows, IniFiles, Logger.Utils;
+  Windows, IniFiles, Logger.Utils, IOUtils;
+
+const
+  cUnlimitedFileSize = 0;
+  cOneFile = 1;
 
 { TFileWriter }
 function GetLogFileName: string;
@@ -108,11 +142,14 @@ begin
 
   FConfig := TFileStorageSettings.Create(GetConfigFilePath);
   FConfig.Load;
+
+  PathWorker := TPathWorker.Create(FConfig);
 end;
 
 destructor TFileStorage.Destroy;
 begin
   FinalizeFile;
+  FreeAndNil(PathWorker);
 
   InternalLogFmt(' <- %s.Destroy', [Self.ClassName]);
 
@@ -133,9 +170,12 @@ procedure TFileStorage.FinalizeFile;
 begin
   if Assigned(FStreamWriter) then
   begin
+    FStreamWriter.Flush;
     FStreamWriter.Close;
     FreeAndNil(FStreamWriter);
   end;
+
+  FInitialized := False;
 end;
 
 function TFileStorage.GetSettings: IFileStorageSettings;
@@ -143,25 +183,22 @@ begin
   Result := FConfig;
 end;
 
-procedure TFileStorage.InitFile;
+procedure TFileStorage.InitFile(const AFileName: string);
 var
   Mode: Word;
   FileStream: TFileStream;
-  LogFilePath: WideString;
 begin
   if FInitialized then
     Exit;
 
   InternalLog('- InitFile');
 
-  LogFilePath := FConfig.LogPath;
-
-  if FileExists(LogFilePath) then
+  if FileExists(AFileName) then
     Mode := fmOpenReadWrite or fmShareDenyWrite
   else
     Mode := fmCreate or fmOpenWrite or fmShareDenyWrite;
                  //TBufferedFileStream
-  FileStream := TFileStream.Create(LogFilePath, Mode);
+  FileStream := TFileStream.Create(AFileName, Mode);
   FileStream.Seek(0, soEnd);
   FStreamWriter := TStreamWriter.Create(FileStream);
   FStreamWriter.OwnStream;
@@ -173,12 +210,31 @@ procedure TFileStorageSettings.SetDefaults;
 begin
   FLogPath :=  GetLogFilePath;
   FDateTimeFormat := 'YYYY.MM.DD HH:NN:SS:ZZZ';
+  FMaxFileSize := cUnlimitedFileSize;
+  FFilesCount := cOneFile;
+end;
+
+procedure TFileStorageSettings.SetFilesCount(AFilesCount: Integer);
+begin
+  FFilesCount := AFilesCount;
+end;
+
+procedure TFileStorageSettings.SetMaxFileSize(AFileSize: Int64);
+begin
+  FMaxFileSize := AFileSize;
 end;
 
 procedure TFileStorage.AsyncWriteHandler(Args: ILogArgument);
 begin
   if Not FInitialized then
-    InitFile;
+    InitFile(PathWorker.WorkingFilePath);
+
+  while PathWorker.IsFileSizeOwerflow(FStreamWriter.BaseStream.Size) do
+  begin
+    FinalizeFile;
+    PathWorker.UseNextFile;
+    InitFile(PathWorker.WorkingFilePath);
+  end;
 
   InternalLogFmt(' - [Write] Source: %s write: %s', [Args.SourceName, Args.LogMessage]);
 
@@ -212,9 +268,19 @@ begin
   Result := FDateTimeFormat;
 end;
 
+function TFileStorageSettings.GetFilesCount: Integer;
+begin
+  Result := FFilesCount;
+end;
+
+function TFileStorageSettings.GetMaxFileSize: Int64;
+begin
+  Result := FMaxFileSize;
+end;
+
 function TFileStorageSettings.GetLogPath: WideString;
 begin
-  Result := FLogPath;
+    Result := FLogPath;
 end;
 
 procedure TFileStorageSettings.Load;
@@ -225,9 +291,79 @@ begin
   try
     FLogPath := Config.ReadString(Self.ClassName, 'LogFilePath', FLogPath);
     FDateTimeFormat := Config.ReadString(Self.ClassName, 'DateTimeFormat', FDateTimeFormat);
+    FMaxFileSize := StrToInt64Def(Config.ReadString(Self.ClassName, 'MaxFileSize' , IntToStr(FMaxFileSize)), 0);
+    FFilesCount := Config.ReadInteger(Self.ClassName, 'FilesCount' , FFilesCount);
   finally
     FreeAndNil(Config);
   end;
+end;
+
+{ TPathStrategy }
+
+constructor TPathWorker.Create(AConfig: IFileStorageSettings);
+begin
+  inherited Create;
+
+  FPath := AConfig.LogPath;
+  FConfig := AConfig;
+  FCurFileNum := 1;
+  FNumbersOweflow := False;
+end;
+
+destructor TPathWorker.Destroy;
+begin
+
+  inherited;
+end;
+
+function TPathWorker.IsFileSizeOwerflow(const ASize: Int64): Boolean;
+begin
+  if FConfig.MaxFileSize = cUnlimitedFileSize then
+     Exit(False);
+
+  Result := ASize > FConfig.MaxFileSize;
+end;
+
+procedure TPathWorker.UseNextFile;
+begin
+  if FCurFileNum < FConfig.FilesCount then
+    Inc(FCurFileNum)
+  else
+  begin
+    FNumbersOweflow := true;
+    FCurFileNum := 1;
+  end;
+end;
+
+function TPathWorker.WorkingFilePath: string;
+
+  function BuildMultipleLogPath(AFileNum: integer): WideString;
+  var
+    FilePath: string;
+    FileName: string;
+    FileExt: string;
+  begin
+    FilePath := ExtractFilePath(FPath);
+    FileName := TPath.GetFileNameWithoutExtension(FPath);
+    FileExt := ExtractFileExt(FPath);
+    Result := Format('%s%s #%.3d%s', [FilePath, FileName, AFileNum, FileExt])
+  end;
+
+  function GetFilePath: WideString;
+  begin
+    if FConfig.FilesCount > cOneFile then
+      Result := BuildMultipleLogPath(FCurFileNum)
+    else
+      Result := FPath;
+  end;
+
+begin
+  Result := GetFilePath;
+
+  InternalLogFmt(' - UseNextFile: %s', [Result]);
+
+    if FNumbersOweflow and FileExists(Result) then
+        TFile.Delete(Result);
 end;
 
 end.

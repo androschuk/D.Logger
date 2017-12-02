@@ -63,7 +63,7 @@ begin
                 begin
                   //update the progress bar in the main thread
                   Percent := Round(new / total * 100);
-                  OnStatusChange(Format('%s : [complete%: %d]; processsed: %d; total: %d', [Logger.SourceName, Percent, new, total]));
+                  OnStatusChange(Format('%s : [complete: %d]; processsed: %d; total: %d', [Logger.SourceName, Percent, new, total]));
                 end
               ); //TThread.Queue
          end);
