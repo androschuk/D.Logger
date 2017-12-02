@@ -1,6 +1,17 @@
 # D.Logger
 Simple logging system for Delphi
 
+## Log levels
+The following are the allowed log levels (in descending order):
+
+ * Off - turn off logging
+ * Fatal
+ * Error
+ * Warning
+ * Info
+ * Debug
+ * Trace
+ 
 ## How to use
 
 ### Quick logging
