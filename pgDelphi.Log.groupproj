@@ -15,6 +15,9 @@
         <Projects Include="Demo\Minimum App\MinimumApp.dproj">
             <Dependencies/>
         </Projects>
+        <Projects Include="Tests\Logger.Test.dproj">
+            <Dependencies/>
+        </Projects>
     </ItemGroup>
     <ProjectExtensions>
         <Borland.Personality>Default.Personality.12</Borland.Personality>
@@ -59,14 +62,23 @@
     <Target Name="MinimumApp:Make">
         <MSBuild Projects="Demo\Minimum App\MinimumApp.dproj" Targets="Make"/>
     </Target>
+    <Target Name="Logger_Test">
+        <MSBuild Projects="Tests\Logger.Test.dproj"/>
+    </Target>
+    <Target Name="Logger_Test:Clean">
+        <MSBuild Projects="Tests\Logger.Test.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="Logger_Test:Make">
+        <MSBuild Projects="Tests\Logger.Test.dproj" Targets="Make"/>
+    </Target>
     <Target Name="Build">
-        <CallTarget Targets="Delphi_Log;SimpleLogger;ConsoleApp;MinimumApp"/>
+        <CallTarget Targets="Delphi_Log;SimpleLogger;ConsoleApp;MinimumApp;Logger_Test"/>
     </Target>
     <Target Name="Clean">
-        <CallTarget Targets="Delphi_Log:Clean;SimpleLogger:Clean;ConsoleApp:Clean;MinimumApp:Clean"/>
+        <CallTarget Targets="Delphi_Log:Clean;SimpleLogger:Clean;ConsoleApp:Clean;MinimumApp:Clean;Logger_Test:Clean"/>
     </Target>
     <Target Name="Make">
-        <CallTarget Targets="Delphi_Log:Make;SimpleLogger:Make;ConsoleApp:Make;MinimumApp:Make"/>
+        <CallTarget Targets="Delphi_Log:Make;SimpleLogger:Make;ConsoleApp:Make;MinimumApp:Make;Logger_Test:Make"/>
     </Target>
     <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
 </Project>
